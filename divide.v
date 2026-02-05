@@ -1,6 +1,7 @@
-module divide16 (
-    parameter WIDTH = 16;
-    input wire clk, rst, start;
+module divide16 #(
+    parameter WIDTH = 16
+)(
+    input wire clk, rst, start,
     input wire signed [(WIDTH-1):0] dividend,      // A
     input wire signed [(WIDTH-1):0] divisor,       // B
     output reg signed [(WIDTH-1):0] quotient,      // Q
@@ -8,19 +9,19 @@ module divide16 (
     output reg done
 );
      // FSM states
-    typedef enum logic [2:0] {  // enum types - int, logic
-        IDLE,
-        INIT,
-        ALIGN,
-        SUB,
-        DECIDE,
-        SHIFT,
-        DONE
-    } state_t;
-    state_t state, next_state;
+    localparam [2:0]
+        IDLE     = 3'b000,
+        INIT     = 3'b001,
+        ALIGN    = 3'b010,
+        SUB      = 3'b011,
+        DECIDE   = 3'b100,
+        SHIFT    = 3'b101,
+        DONE     = 3'b110;
+
+    reg[2:0] state, next_state;
 
     // Sign Registers
-    reg dividend_sign, divisor_sign;
+    reg signed dividend_sign, divisor_sign;
 
     // Temp Registers
     reg [WIDTH-1:0] A, B, SHIFT_B;
@@ -29,7 +30,12 @@ module divide16 (
     // MSB Detection
     wire [$clog2(WIDTH)-1:0] msb_pos;
     wire [$clog2(WIDTH)-1:0] shift_amt;
-    assign msb_pos = priority_encode_164(B);
+    // wire msb_pos;
+    priority_encode_164 priority_encoder(
+        .in(B),
+        .out(msb_pos),
+        .valid()
+    );
     assign shift_amt = (WIDTH-1) - msb_pos;
 
     // ALU for Subtraction

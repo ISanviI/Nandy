@@ -1,5 +1,9 @@
-module mux_21 (
-    parameter WIDTH = 16;
+// Signed - The most significant bit contains info about the sign of the number. 1 means negative, 0 means positive. If negative, the actual number is negative in magnitude equal to the two's complement of itself.
+// So negative numbers are stored in two's complement form of its absolute value/magnitude.
+
+module mux_21 #(
+    parameter WIDTH = 16
+)(
     input wire sel,
     input wire [WIDTH-1:0] in0,
     input wire [WIDTH-1:0] in1,
@@ -8,10 +12,11 @@ module mux_21 (
     assign out = sel ? in1 : in0;
 endmodule
 
-module mux_81 (
-    parameter WIDTH = 16;QEMU
+module mux_81 #(
+    parameter WIDTH = 8
+)(
     input wire [2:0] sel,
-    input wire [WIDTH-1:0] in [7:0],
+    input wire [WIDTH-1:0] in,
     output wire [WIDTH-1:0] out
 );
     assign out = in[sel];

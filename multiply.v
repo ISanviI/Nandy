@@ -1,36 +1,39 @@
-module multiply (
-    parameter WIDTH = 16,
+module multiply #(
+    parameter WIDTH = 16
+)(
     input wire clk, rst, start,
-    input wire [WIDTH-1:0] multiplicand,    // M
-    input wire [WIDTH-1:0] multiplier,      // Q
-    output reg [WIDTH-1:0] product_h,       // A
-    output reg [WIDTH-1:0] product_l,       // Q
+    input wire signed [WIDTH-1:0] multiplier,      // Q
+    input wire signed [WIDTH-1:0] multiplicand,    // M
+    output reg [2*WIDTH-1:0] product               // A
 );
-    // Signs
-    reg multiplicand_sign, multiplier_sign;
 
     // Temp Registers
-    reg [WIDTH-1:0] A, Q, M, M_BAR;
-    reg cnt, Q_1;
+    reg signed [WIDTH-1:0] A, Q, M, M_BAR;
+    reg [$clog2(WIDTH+1)-1:0] cnt;
+    reg Q_1;
 
     // FSM States
-    typedef enum logic [1:0] {
-        IDLE,
-        INIT,
-        OPERATION,
-        SHIFT,
-        DONE
-    } state_t;
-    state_t state, next_state;
+    localparam [2:0]
+        IDLE      = 3'b000,
+        INIT      = 3'b001,
+        OPERATION = 3'b010,
+        SHIFT     = 3'b011,
+        DONE      = 3'b100;
+
+    reg [2:0] state;
+    reg [2:0] next_state;
 
     // FSM Control Path
     always @(posedge clk or posedge rst) begin
         if (rst) state <= IDLE;
+        // No need to reset values for A, Q, M, M_BAR, cnt, Q_1 as they will be initialized in INIT state.
         else state <= next_state;
     end
 
-    // FSM Next State Logic
+    // FSM Control Path - Next State Logic
     always @(*) begin
+        // If next_state value is not provided, the synthesis tool assumes value needs to be remembered and hence creates a latch which could cause problems for timing analysis.
+        // To avoid this, we assign a default value to next_state at the beginning of the always block.
         next_state = state; // default hold state
         case (state)
             IDLE: if (start) next_state = INIT;
@@ -50,10 +53,8 @@ module multiply (
                 Q <= multiplier;
                 M <= multiplicand;
                 M_BAR <= ~multiplicand + 1; // Two's complement
-                cnt <= WIDTH;
+                cnt <= WIDTH-1;
                 Q_1 <= 0;
-                multiplicand_sign <= multiplicand[WIDTH-1];
-                multiplier_sign <= multiplier[WIDTH-1];
             end
             OPERATION: begin
                 case ({Q[0], Q_1})
@@ -63,13 +64,12 @@ module multiply (
                 endcase
             end
             SHIFT: begin
-                Q_1 = Q[0];
-                {A, Q} <= {A, Q} >>> 1;     // Arithmetic right shift
+                Q_1 <= Q[0];
+                {A, Q} <= $signed({A, Q}) >>> 1;     // Arithmetic right shift
                 cnt <= cnt - 1;
             end
             DONE: begin
-                product_h <= A;
-                product_l <= Q;
+                product <= {A, Q};
             end
             default: ;
         endcase
