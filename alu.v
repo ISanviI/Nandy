@@ -38,6 +38,11 @@ always @(*) begin
         6'b010001: result = 1;              // CONSTANT 1
         6'b010010: result = ~D + 1;         // COMPLEMENT D
         6'b010011: result = ~M + 1;         // COMPLEMENT M
+        // 6'b010100 - Multiplication
+        // 6'b010101 - Division_Quotient
+        // 6'b010110 - Division_Remainder
+        6'b010111: result = D;              // PASS D
+        6'b011000: result = M;              // PASS M
         default: result = 16'b0;            // DEFAULT
     endcase
     // Set zero flag

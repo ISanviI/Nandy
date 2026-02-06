@@ -6,11 +6,11 @@ module pc (
 );
 
 always @(posedge clk or posedge rst) begin
-    if (rst) pc_out <= 0;
+    if (rst) pc_out <= 0;                   // reset
     else begin
         case (control)
-            2'b01: pc_out <= pc_out + 1;
-            2'b10: pc_out <= pc_in;
+            2'b01: pc_out <= pc_out + 1;    // increment
+            2'b10: pc_out <= pc_in;         // load
             default: ; 
         endcase
     end

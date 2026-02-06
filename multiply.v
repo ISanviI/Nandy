@@ -4,7 +4,8 @@ module multiply #(
     input wire clk, rst, start,
     input wire signed [WIDTH-1:0] multiplier,      // Q
     input wire signed [WIDTH-1:0] multiplicand,    // M
-    output reg [2*WIDTH-1:0] product               // A
+    output reg [2*WIDTH-1:0] product,              // A
+    output reg done
 );
 
     // Temp Registers
@@ -70,8 +71,8 @@ module multiply #(
             end
             DONE: begin
                 product <= {A, Q};
+                done <= 1'b1;
             end
-            default: ;
         endcase
     end
     
