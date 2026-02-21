@@ -1,23 +1,48 @@
-module cpu (
-    input  logic        clk,
-    input  logic        rst,
-    input  logic [15:0] instruction,
+module cpu_arbiter (
+    input wire clk, rst,
+    input wire [15:0] instruction,
+    input wire cpu_active,
 
-    // Status signals from Coprocessors
-    input wire mul_done,
+    // Status signals from Multiply FSM
+    input wire mul_req_alu,
+    input wire [5:0] mul_alu_op,
+    input wire signed [15:0] mul_alu_x,
+    input wire signed [15:0] mul_alu_y,
+    input wire mul_done,            // Default to 0, set to 1 for one cycle when MUL result is ready. Similar for div_done
+
+    // Status Signals from Divide FSM
+    input wire div_req_alu,
+    input wire [5:0] div_alu_op,
+    input wire signed [15:0] div_alu_x,
+    input wire signed [15:0] div_alu_y,
     input wire div_done,
 
-    // Control Outputs to CPU Core
-    output reg stall, // Freeze PC during multi-cycle Multiplication and Division
-    // output reg reg_write_en, // Global Write Enable for A, D, M registers
+    // OPERANDS (from CPU)
+    input wire signed [15:0] cpu_alu_x,
+    input wire signed [15:0] cpu_alu_y,
+    input wire [5:0] cpu_alu_op,
 
-    // Control Outputs to Coprocessors
-    output reg start_mul,
-    output reg start_div,
+    // Control Outputs (to CPU)
+    output reg stall,               // Freeze PC during multi-cycle Multiplication and Division
 
-    // ALU Control
-    output reg [1:0] alu_owner, // 00: CPU, 01: MUL, 10: DIV
-    output reg [5:0] alu_op_override,    // ALU operation select
+    // Start Signals (to FSM)
+    output reg mul_start,           // Default to 0, set to 1 for one cycle to trigger MUL operation. Similar for div_start
+    output reg div_start,
+
+    // Outputs To ALU (multiplexed)
+    output reg [5:0] alu_opcode,
+    output reg signed [15:0] alu_x_in,
+    output reg signed [15:0] alu_y_in,
+
+    // INPUTS FROM ALU
+    input wire signed [15:0] alu_result,
+    input wire [3:0] alu_flags,
+
+    // Outputs (to FSMs and CPU)
+    output reg signed [15:0] mul_alu_result,
+    output reg signed [15:0] div_alu_result,
+    output reg signed [15:0] cpu_alu_result,
+    output reg [3:0] cpu_alu_flags
 );
 
     // HACK Instruction Decoding
@@ -30,20 +55,14 @@ module cpu (
 
     // FSM states
     localparam [1:0]
-        IDLE = 2'b00,
-        ALU  = 2'b01
-        MUL  = 2'b10,
-        DIV  = 2'b11;
-
-    localparam [5:0]
-        MUL_OP = 6'b010100,
-        DIV_Q_OP = 6'b010101;
-        DIV_R_OP = 6'b010110;
-    
+        CPU = 2'b00,
+        MUL = 2'b01,
+        DIV = 2'b10;
+        
     reg [1:0] state, next_state;
 
     always @(posedge clk or posedge rst) begin
-        if (rst) state <= IDLE;
+        if (rst) state <= CPU;
         else state <= next_state; 
     end
 
@@ -53,44 +72,65 @@ module cpu (
         stall = 1'b0;
         mul_start = 1'b0;
         div_start = 1'b0;
-        alu_owner = 2'b00; // Default to CPU
-        alu_opcode = 6'b000000;
+        alu_opcode = 6'b0;
+        alu_x_in = 16'b0;
+        alu_y_in = 16'b0;
+        mul_alu_result = 16'b0;
+        div_alu_result = 16'b0;
+        cpu_alu_result = 16'b0;
+        cpu_alu_flags = 4'b0;
 
         case (state)
-            IDLE: begin
-                if (trig_mul) begin
+            CPU: begin
+                if (cpu_active) begin
+                    stall = 1'b0;
+                    alu_opcode = cpu_alu_op;
+                    alu_x_in = cpu_alu_x;
+                    alu_y_in = cpu_alu_y;
+                    cpu_alu_result = alu_result;
+                    cpu_alu_flags = alu_flags;
+                end
+                else if (trig_mul) begin
                     next_state = MUL;
-                    stall      = 1'b1;  // Freeze CPU immediately
-                    start_mul  = 1'b1;  // Pulse start
-                end 
+                    stall = 1'b1;               // Freeze CPU immediately
+                    mul_start = 1'b1;           // Start multiply operation
+                end
                 else if (trig_div) begin
                     next_state = DIV;
-                    stall      = 1'b1;
-                    start_div  = 1'b1;
+                    stall = 1'b1;
+                    div_start = 1'b1;
                 end
             end
 
             MUL: begin
-                stall           = 1'b1;      // Keep CPU frozen
-                alu_owner       = 2'b01;     // Give ALU to Multiplier
-                alu_op_override = ALU_ADD;   // Force ALU to ADD
-                
+                stall = 1'b1;                   // Keep CPU frozen
+                if (mul_req_alu) begin
+                    alu_opcode = mul_alu_op;
+                    alu_x_in = mul_alu_x;
+                    alu_y_in = mul_alu_y;
+                    mul_alu_result = alu_result;
+                end
                 if (mul_done) begin
-                    stall      = 1'b0;      // Unfreeze for Writeback
-                    next_state = IDLE;
+                    next_state = CPU;
+                    stall = 1'b0;               // Release CPU
                 end
             end
 
             DIV: begin
-                stall           = 1'b1;
-                alu_owner   = 2'b10;     // Give ALU to Divider
-                alu_op_override = ALU_SUB;   // Force ALU to SUB
-                
+                stall = 1'b1;                   // Keep CPU frozen
+                if (div_req_alu) begin
+                    alu_opcode = div_alu_op;
+                    alu_x_in = div_alu_x;
+                    alu_y_in = div_alu_y;
+                    div_alu_result = alu_result;
+                end
                 if (div_done) begin
-                    stall      = 1'b0;
-                    next_state = IDLE;
+                    next_state = CPU;
+                    stall = 1'b0;               // Release CPU
                 end
             end
+
+            default: next_state = CPU;
         endcase
     end
 

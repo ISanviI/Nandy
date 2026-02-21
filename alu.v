@@ -25,11 +25,11 @@ always @(*) begin
         6'b000100: result = D | M;          // OR
         6'b000101: result = D ^ M;          // XOR
         6'b000110: result = ~D;             // NOT D
-        6'b000111: result = D + 1;          // ADD 1 D
-        6'b001000: result = D - 1;          // SUB 1 D
+        6'b000111: result = D + 1;          // INC D
+        6'b001000: result = D - 1;          // DEC D
         6'b001001: result = ~M;             // NOT M
-        6'b001010: result = M + 1;          // ADD 1 M
-        6'b001011: result = M - 1;          // SUB 1 M
+        6'b001010: result = M + 1;          // INC M
+        6'b001011: result = M - 1;          // DEC M
         6'b001100: result = D <<< 1;        // ARITHMETIC SHIFT LEFT D
         6'b001101: result = D >>> 1;        // ARITHMETIC SHIFT RIGHT D
         6'b001110: result = M <<< 1;        // ARITHMETIC SHIFT LEFT M

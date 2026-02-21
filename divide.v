@@ -1,3 +1,4 @@
+//  Based on opcode 6'b010101 for Quotient and 6'b010110 for Remainder, the Divider FSM should handle which result to output.
 module divide16 #(
     parameter WIDTH = 16
 )(
