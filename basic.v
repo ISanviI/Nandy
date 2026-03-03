@@ -16,10 +16,10 @@ module mux_81 #(
     parameter WIDTH = 8
 )(
     input wire [2:0] sel,
-    input wire [WIDTH-1:0] in [7:0],
+    input  wire [8*WIDTH-1:0] in,
     output wire [WIDTH-1:0] out
 );
-    assign out = in[sel];
+    assign out = in[sel*WIDTH +: WIDTH];
 endmodule
 
 module priority_encode_83 (
