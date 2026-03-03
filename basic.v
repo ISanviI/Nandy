@@ -16,7 +16,7 @@ module mux_81 #(
     parameter WIDTH = 8
 )(
     input wire [2:0] sel,
-    input wire [WIDTH-1:0] in,
+    input wire [WIDTH-1:0] in [7:0],
     output wire [WIDTH-1:0] out
 );
     assign out = in[sel];

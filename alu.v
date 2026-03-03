@@ -3,7 +3,7 @@ module ALU (
     input wire signed [15:0] D,
     input wire signed [15:0] M,
     output reg signed [15:0] result,
-    output reg [3:0] flags,    // carry, negative, zero, overflow, 
+    output reg [3:0] flags      // carry, negative, zero, overflow, 
 );
     reg signed [16:0] temp;
 
