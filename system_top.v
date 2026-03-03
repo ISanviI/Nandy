@@ -1,3 +1,7 @@
+// TODO - Connect addressMH/ML to ROM+RAM as well as outM, writeM (not to synthesized ROM but to RAM only) in System Top
+// TODO - Set flags for MUL and DIV (just negative and zero based on product sign and value)
+// TODO - Connect program counter to ROM and instruction input from ROM in System Top
+
 // Instantiates all modules and connects them together
 module system_top (
     input  wire clk,
@@ -82,10 +86,10 @@ module system_top (
         .inM(inM),
         .outM(outM),
         .writeM(writeM),
-        .addressM(addressM),
+        .addressMH(addressMH),
+        .addressML(addressML),
         .pc(pc),
-        .instruction_is_mul(instruction_is_mul),
-        .instruction_is_div(instruction_is_div),
+        .flags(flags)
         .cpu_active(cpu_active),
         .cpu_alu_x(cpu_alu_x),
         .cpu_alu_y(cpu_alu_y),
@@ -93,18 +97,15 @@ module system_top (
         .stall(stall),
         .alu_result(alu_result),
         .alu_flags(alu_flags),
-        .mul_start(start_mul),
         .mul_done(mul_done),
         .mul_product(mul_product),
         .mul_input_a(mul_input_a),
         .mul_input_b(mul_input_b),
-        .div_start(start_div),
         .div_done(div_done),
         .div_quotient(div_quotient),
         .div_remainder(div_remainder),
         .div_dividend(div_dividend),
         .div_divisor(div_divisor),
-        .flags(flags)
     );
 
     // --- ARBITER (routes ALU access) ---
@@ -134,17 +135,14 @@ module system_top (
         .alu_y_in(alu_y_in),
         .alu_result(alu_result),
         .alu_flags(alu_flags),
-        .mul_alu_result_valid(mul_alu_result_valid),
-        .div_alu_result_valid(div_alu_result_valid),
-        .cpu_alu_result_valid(cpu_alu_result_valid),
         .mul_alu_result(mul_alu_result),
         .div_alu_result(div_alu_result),
-        .cpu_alu_result(),
-        .cpu_alu_flags()
+        .cpu_alu_result(cpu_alu_result),
+        .cpu_alu_flags(cpu_alu_flags)
     );
 
     // --- MULTIPLY FSM (Baugh-Wooley signed multiplication) ---
-    multiply_shared u_multiply (
+    multiply u_multiply (
         .clk(clk),
         .rst(rst),
         .start(start_mul),
@@ -160,7 +158,7 @@ module system_top (
     );
 
     // --- DIVIDE FSM (Restoring division) ---
-    divide_shared u_divide (
+    divide u_divide (
         .clk(clk),
         .rst(rst),
         .start(start_div),

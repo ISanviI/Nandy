@@ -1,3 +1,6 @@
+// CPU gives control signals to the arbiter about when it needs the ALU and what operation, and the arbiter responds with the ALU result and flags. The CPU also interfaces with RAM for load/store operations, and has a program counter for instruction sequencing. The multiply and divide operations are handled by separate FSMs, and the CPU must stall while waiting for those results. The instruction decoding logic determines how to update registers, memory, and the program counter based on the current instruction.
+// CPU sends the div result which is either quotient or remainder, based on opcode. Not Both.
+
 module cpu (
     input wire clk, rst,
     input wire [15:0] instruction,
@@ -37,7 +40,7 @@ module cpu (
 );
 
     // 1. CPU Registers
-    reg signed [15:0] D, A, M; 
+    reg signed [15:0] D, A; 
     reg [15:0] PC;
 
     assign pc = PC;
@@ -53,7 +56,7 @@ module cpu (
     // C-instruction if MSB=10
     wire is_c_inst = (instruction[15] && ~instruction[14]);
     wire [5:0] opcode = instruction[11:6];
-    wire [2:0] dest = instruction[5:3];     // A, D, M destination bits
+    wire [2:0] dest = instruction[5:3];     // A, D, outM destination bits
     wire [2:0] jump = instruction[2:0];     // Jump bits
     wire is_mul = is_c_inst && (opcode == 6'b010100);
     wire is_div = is_c_inst && (opcode == 6'b010101 || opcode == 6'b010110);
@@ -62,7 +65,7 @@ module cpu (
 
     // 3. ALU INPUT/OUTPUT
     assign cpu_alu_x = D;
-    assign cpu_alu_y = instruction[12] ? inM : A;
+    assign cpu_alu_y = (is_c_inst && instruction[12]) ? inM : A;
     assign cpu_alu_op = opcode;
     assign cpu_active = is_c_inst && !is_mul && !is_div && !stall; 
 
@@ -78,10 +81,10 @@ module cpu (
     
     always @(posedge clk or posedge rst) begin
         if (rst) begin
-            PC <= 16'b0;
+            PC <= 16'b0;                     // Reset
         end else if (!stall) begin
             if (should_jump) begin
-                PC <= A;                     // Jump to A register address
+                PC <= A;                     // Load A into PC for jump
             end else begin
                 PC <= PC + 1;                // Normal increment
             end
@@ -104,7 +107,6 @@ module cpu (
         if (rst) begin
             D <= 16'b0;
             A <= 16'b0;
-            M <= 16'b0;
             flags <= 4'b0;
             writeM <= 1'b0;
             outM <= 16'b0;
@@ -125,9 +127,8 @@ module cpu (
                 if (should_load_a) begin
                     A <= alu_result;
                 end
-                // Load M register and set write signal if dest bit set
+                // Load outM register and set write signal if dest bit set
                 if (should_load_m) begin
-                    M <= alu_result;
                     outM <= alu_result;
                     addressML <= A;
                     writeM <= 1'b1;
@@ -147,10 +148,11 @@ module cpu (
                 if (dest[2]) D <= mul_product[15:0];
                 if (dest[1]) A <= mul_product[15:0];
                 if (dest[0]) begin
-                    M <= mul_product[15:0];
                     outM <= mul_product[15:0];
                     addressML <= A;
                     writeM <= 1'b1;
+                end else begin
+                    writeM <= 1'b0;
                 end
             end
 
@@ -159,10 +161,11 @@ module cpu (
                 if (dest[2]) D <= div_result;
                 if (dest[1]) A <= div_result;
                 if (dest[0]) begin
-                    M <= div_result;
                     outM <= div_result;
                     addressML <= A;
                     writeM <= 1'b1;
+                end else begin
+                    writeM <= 1'b0;
                 end
             end
         end else begin

@@ -8,8 +8,25 @@ module divide16 #(
     output reg signed [(WIDTH-1):0] quotient,      // Q
     output reg signed [(WIDTH-1):0] remainder,     // R
     output reg done
+
+    // REQUEST SIGNALS to Arbiter
+    output reg req_alu,
+    output reg [5:0] alu_op,
+    output reg signed [WIDTH-1:0] alu_x,
+    output reg signed [WIDTH-1:0] alu_y,
+
+    // RESPONSE SIGNALS from Arbiter
+    input  wire signed [WIDTH-1:0] alu_result,
+    input  wire carry_flag                          // Borrow flag from ALU
 );
-     // FSM states
+    
+    // Internal Registers
+    reg signed [WIDTH-1:0] A, B;
+    reg [WIDTH-1:0] SHIFT_B;
+    reg [$clog2(WIDTH)-1:0] cnt;
+    reg dividend_sign, divisor_sign;
+    
+    // FSM states
     localparam [2:0]
         IDLE     = 3'b000,
         INIT     = 3'b001,
@@ -21,9 +38,6 @@ module divide16 #(
 
     reg[2:0] state, next_state;
 
-    // Sign Registers
-    reg signed dividend_sign, divisor_sign;
-
     // Temp Registers
     reg [WIDTH-1:0] A, B, SHIFT_B;
     reg [$clog2(WIDTH)-1:0] cnt;
@@ -31,17 +45,13 @@ module divide16 #(
     // MSB Detection
     wire [$clog2(WIDTH)-1:0] msb_pos;
     wire [$clog2(WIDTH)-1:0] shift_amt;
-    // wire msb_pos;
+
     priority_encode_164 priority_encoder(
         .in(B),
         .out(msb_pos),
         .valid()
     );
     assign shift_amt = (WIDTH-1) - msb_pos;
-
-    // ALU for Subtraction
-    reg [WIDTH-1:0] sub_out;
-    reg borrow;
 
     // FSM Sequential
     always @(posedge clk or posedge rst) begin
@@ -67,7 +77,13 @@ module divide16 #(
     // Data Path
     always @(posedge clk) begin
         case (state)
+            IDLE: begin
+                done <= 1'b0;
+                req_alu <= 1'b0;
+            end
+
             INIT: begin
+                // Handle sign and convert to positive if necessary
                 if (dividend[WIDTH-1] == 1'b1) begin
                     dividend_sign <= 1'b1;
                     A <= (~dividend) + 1;
@@ -75,6 +91,7 @@ module divide16 #(
                     dividend_sign <= 1'b0;
                     A <= dividend;
                 end
+
                 if (divisor[WIDTH-1] == 1'b1) begin
                     divisor_sign <= 1'b1;
                     B <= (~divisor) + 1;
@@ -85,35 +102,54 @@ module divide16 #(
                 quotient <= 0;
                 done <= 0;
             end
+
             ALIGN: begin
+                // Align divisor by shifting left until its MSB is in the same position as the dividend's MSB
                 SHIFT_B <= B << shift_amt;
                 cnt <= shift_amt;
             end
+
             SUB: begin
-                {borrow, sub_out} <= A - SHIFT_B;
+                // Request ALU to do subtraction: A - SHIFT_B
+                req_alu <= 1'b1;
+                alu_op <= 6'b000010;                // SUB operation
+                alu_x <= A;
+                alu_y <= SHIFT_B;
             end
+
             DECIDE: begin
-                if (!borrow) begin
-                    A <= sub_out;
+                // Check if subtraction was successful (no borrow)
+                if (!carry_flag) begin
+                    // Subtraction successful, quotient bit = 1
+                    A <= alu_result;                // Store result
                     quotient[cnt] <= 1'b1;
                 end else begin
+                    // Subtraction failed (borrow), quotient bit = 0
+                    // Don't update A (restore)
                     quotient[cnt] <= 1'b0;
                 end
+                req_alu <= 1'b0;                    // Clear ALU request after decision
             end
+
             SHIFT: begin
                 SHIFT_B <= SHIFT_B >> 1;
                 cnt <= cnt - 1;
             end
+
             DONE: begin
+                // Handle sign of results
                 if (dividend_sign ^ divisor_sign) begin
                     quotient <= (~quotient) + 1;
                 end
+                
                 if (dividend_sign) begin
                     remainder <= (~A) + 1;
                 end else begin
                     remainder <= A;
                 end
+
                 done <= 1'b1;
+                req_alu <= 1'b0;
             end
         endcase
     end

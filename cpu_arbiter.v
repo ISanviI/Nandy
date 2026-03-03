@@ -103,6 +103,7 @@ module cpu_arbiter (
             end
 
             MUL: begin
+                mul_start = 1'b0;               // Ensure start is only pulsed for one cycle
                 stall = 1'b1;                   // Keep CPU frozen
                 if (mul_req_alu) begin
                     alu_opcode = mul_alu_op;
@@ -117,6 +118,7 @@ module cpu_arbiter (
             end
 
             DIV: begin
+                div_start = 1'b0;
                 stall = 1'b1;                   // Keep CPU frozen
                 if (div_req_alu) begin
                     alu_opcode = div_alu_op;
