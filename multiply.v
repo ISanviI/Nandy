@@ -7,7 +7,7 @@ module multiply #(
     input wire signed [WIDTH-1:0] multiplier,      // Q
     input wire signed [WIDTH-1:0] multiplicand,    // M
     output reg [2*WIDTH-1:0] product,              // A
-    output reg done
+    output reg done,
 
     // REQUEST SIGNALS to Arbiter
     output reg req_alu,

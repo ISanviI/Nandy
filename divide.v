@@ -7,7 +7,7 @@ module divide #(
     input wire signed [(WIDTH-1):0] divisor,       // B
     output reg signed [(WIDTH-1):0] quotient,      // Q
     output reg signed [(WIDTH-1):0] remainder,     // R
-    output reg done
+    output reg done,
 
     // REQUEST SIGNALS to Arbiter
     output reg req_alu,

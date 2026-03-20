@@ -31,8 +31,8 @@ module system_top (
 
     // Arbiter status signals
     wire stall;
-    wire start_mul;
-    wire start_div;
+    wire mul_start;
+    wire div_start;
 
     // ALU signals (shared)
     wire [5:0] alu_opcode;
@@ -72,8 +72,8 @@ module system_top (
     // --- SHARED ALU (instantiated once) ---
     ALU u_alu (
         .opcode(alu_opcode),
-        .X(alu_x_in),
-        .Y(alu_y_in),
+        .D(alu_x_in),
+        .M(alu_y_in),
         .result(alu_result),
         .flags(alu_flags)
     );
@@ -89,7 +89,7 @@ module system_top (
         .addressMH(addressMH),
         .addressML(addressML),
         .pc(pc),
-        .flags(flags)
+        .flags(flags),
         .cpu_active(cpu_active),
         .cpu_alu_x(cpu_alu_x),
         .cpu_alu_y(cpu_alu_y),
@@ -128,8 +128,8 @@ module system_top (
         .cpu_alu_y(cpu_alu_y),
         .cpu_alu_op(cpu_alu_op),
         .stall(stall),
-        .start_mul(start_mul),
-        .start_div(start_div),
+        .mul_start(mul_start),
+        .div_start(div_start),
         .alu_opcode(alu_opcode),
         .alu_x_in(alu_x_in),
         .alu_y_in(alu_y_in),
@@ -145,7 +145,7 @@ module system_top (
     multiply u_multiply (
         .clk(clk),
         .rst(rst),
-        .start(start_mul),
+        .start(mul_start),
         .multiplier(mul_input_a),
         .multiplicand(mul_input_b),
         .product(mul_product),
@@ -161,7 +161,7 @@ module system_top (
     divide u_divide (
         .clk(clk),
         .rst(rst),
-        .start(start_div),
+        .start(div_start),
         .dividend(div_dividend),
         .divisor(div_divisor),
         .quotient(div_quotient),
