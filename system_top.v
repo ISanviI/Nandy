@@ -23,12 +23,14 @@ module system_top (
 );
 
     // CPU to Arbiter signals
-    wire instruction_is_mul;
-    wire instruction_is_div;
     wire cpu_active;
     wire signed [15:0] cpu_alu_x;
     wire signed [15:0] cpu_alu_y;
     wire [5:0] cpu_alu_op;
+
+    // Arbiter to CPU Signals
+    wire signed [15:0] cpu_alu_result;
+    wire [3:0] cpu_alu_flags;
 
     // Arbiter status signals
     wire stall;
@@ -96,8 +98,8 @@ module system_top (
         .cpu_alu_y(cpu_alu_y),
         .cpu_alu_op(cpu_alu_op),
         .stall(stall),
-        .alu_result(alu_result),
-        .alu_flags(alu_flags),
+        .alu_result(cpu_alu_result),
+        .alu_flags(cpu_alu_flags),
         .mul_done(mul_done),
         .mul_product(mul_product),
         .mul_input_a(mul_input_a),
@@ -138,8 +140,8 @@ module system_top (
         .alu_flags(alu_flags),
         .mul_alu_result(mul_alu_result),
         .div_alu_result(div_alu_result),
-        .cpu_alu_result(alu_result),
-        .cpu_alu_flags(alu_flags)
+        .cpu_alu_result(cpu_alu_result),
+        .cpu_alu_flags(cpu_alu_flags)
     );
 
     // --- MULTIPLY FSM (Baugh-Wooley signed multiplication) ---
