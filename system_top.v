@@ -15,7 +15,8 @@ module system_top (
     input  wire [15:0] inM,
     output wire [15:0] outM,
     output wire writeM,
-    output wire [15:0] addressM,
+    output wire [15:0] addressMH,
+    output wire [15:0] addressML,
 
     // Output flags
     output wire [3:0] flags
@@ -105,7 +106,7 @@ module system_top (
         .div_quotient(div_quotient),
         .div_remainder(div_remainder),
         .div_dividend(div_dividend),
-        .div_divisor(div_divisor),
+        .div_divisor(div_divisor)
     );
 
     // --- ARBITER (routes ALU access) ---
@@ -137,8 +138,8 @@ module system_top (
         .alu_flags(alu_flags),
         .mul_alu_result(mul_alu_result),
         .div_alu_result(div_alu_result),
-        .cpu_alu_result(cpu_alu_result),
-        .cpu_alu_flags(cpu_alu_flags)
+        .cpu_alu_result(alu_result),
+        .cpu_alu_flags(alu_flags)
     );
 
     // --- MULTIPLY FSM (Baugh-Wooley signed multiplication) ---

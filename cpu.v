@@ -36,7 +36,7 @@ module cpu (
     input  wire signed [15:0] div_quotient,
     input  wire signed [15:0] div_remainder,
     output wire signed [15:0] div_dividend,
-    output wire signed [15:0] div_divisor,
+    output wire signed [15:0] div_divisor
 );
 
     // 1. CPU Registers
@@ -73,6 +73,7 @@ module cpu (
     // Flags is a register inside this module, hence can be used for logic inside this module as well.
     // It is also driven out through the module port
     wire positive = ~flags[1] & ~flags[2];
+    wire should_jump;
     assign should_jump = is_c_inst && (
         (jump[2] & flags[2]) |   // JLT
         (jump[1] & flags[1]) |   // JEQ

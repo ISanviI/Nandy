@@ -34,22 +34,20 @@ module divide #(
         SUB      = 3'b011,
         DECIDE   = 3'b100,
         SHIFT    = 3'b101,
-        DONE     = 3'b110;
+        DONE     = 3'b110,
+        ERROR    = 3'b111;
 
     reg[2:0] state, next_state;
-
-    // Temp Registers
-    reg [WIDTH-1:0] A, B, SHIFT_B;
-    reg [$clog2(WIDTH)-1:0] cnt;
 
     // MSB Detection
     wire [$clog2(WIDTH)-1:0] msb_pos;
     wire [$clog2(WIDTH)-1:0] shift_amt;
+    wire valid;                                    // HIGH when divisor B != 0
 
     priority_encode_164 priority_encoder(
         .in(B),
         .out(msb_pos),
-        .valid()
+        .valid(valid)                              // connected: LOW means B == 0
     );
     assign shift_amt = (WIDTH-1) - msb_pos;
 
@@ -65,11 +63,12 @@ module divide #(
         case (state)
             IDLE: if (start) next_state = INIT;
             INIT: next_state = ALIGN;
-            ALIGN: next_state = SUB;
+            ALIGN:  next_state = valid ? SUB : ERROR;
             SUB: next_state = DECIDE;
             DECIDE: next_state = SHIFT;
             SHIFT: next_state = (cnt==0) ? DONE : SUB;
             DONE: next_state = IDLE;
+            ERROR:  next_state = IDLE;             // Stay one cycle then return IDLE
             default: next_state = IDLE;
         endcase
     end
@@ -104,9 +103,11 @@ module divide #(
             end
 
             ALIGN: begin
-                // Align divisor by shifting left until its MSB is in the same position as the dividend's MSB
-                SHIFT_B <= B << shift_amt;
-                cnt <= shift_amt;
+                if (valid) begin
+                    // Align divisor by shifting left until its MSB is in the same position as the dividend's MSB
+                    SHIFT_B <= B << shift_amt;
+                    cnt <= shift_amt;
+                end
             end
 
             SUB: begin
@@ -151,6 +152,15 @@ module divide #(
                 done <= 1'b1;
                 req_alu <= 1'b0;
             end
+
+            ERROR: begin
+                // Divisor was zero — raise error flag and assert done so caller unblocks
+                quotient    <= {WIDTH{1'b0}};
+                remainder   <= {WIDTH{1'b0}};
+                done        <= 1'b1;
+                req_alu     <= 1'b0;
+            end
+
         endcase
     end
 
