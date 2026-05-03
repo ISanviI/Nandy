@@ -1,3 +1,4 @@
+// Carry vs Overflow Flag.. VVIMP
 module ALU (
     input wire [5:0] opcode,
     input wire signed [15:0] D,

@@ -57,7 +57,7 @@ write_verilog synth_netlist.v
 
 # Show the schematic diagram
 # read_verilog synth_netlist.v
-# show -format ps
+# show -format dot -prefix system_top
 # dot -Tpng system_top.dot -o system_top.png (not in yosys shell, run in terminal)
 
 # Command to start mounted Docker Container while working in "~/Documents/Applications/OpenLane" directory (where OpenLane is cloned and PDKs are stored)
@@ -73,3 +73,6 @@ write_verilog synth_netlist.v
 # flow.tcl -design spm
 # >> ls Applications/OpenLane/designs/spm/runs/RUN_2026.03.20_15.50.57/results/final
 # -- def  gds  lef  lib  mag  maglef  sdc  sdf  spef  spi  verilog
+
+# To view GDSII image, go in the specific RUN_20xx.xx.xx_xx.xx.xx/results/final directory and execute below command (outside the docker container)
+# >> klayout -e gds/nandy.gds
